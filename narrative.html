@@ -1,0 +1,24 @@
+<html>
+<script src='https://d3js.org/d3.v5.min.js'></script>
+<style> circle {fill: lightblue; stroke: black;} </style>
+<body onload='init()'>
+<svg width=300 height=300>
+</svg>
+<script>
+async function init() {
+
+    var data = d3.request("total-alcohol-consumption-per-capita-litres-of-pure-alcohol.csv")
+        .mimeType("text/csv")
+    .response(function (xhr) { return d3.csvParse(xhr.responseText); })
+    .get(function(data) {
+        console.log(data);
+    });
+   
+     
+
+    // console.log(data);
+    
+}
+</script>
+</body>
+</html>
