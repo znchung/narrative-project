@@ -1,0 +1,206 @@
+<html>
+<script src='https://d3js.org/d3.v5.min.js'></script>
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+<script src="https://d3js.org/d3-geo-projection.v3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"></script>
+
+<script src="https://rawgit.com/susielu/d3-annotation/master/d3-annotation.min.js"></script>
+
+<style>
+    circle {
+        fill: lightblue;
+        stroke: black;
+    }
+
+    .dotted {
+  stroke: #5c5c5c;
+  stroke-dasharray: 1 1;
+  fill: none;
+}
+
+    .tooltip {
+  opacity: 0;
+  position: absolute;
+  top: -14px;
+  left: 0;
+  padding: 0.6em 1em;
+  background: #fff;
+  text-align: center;
+  line-height: 1.4em;
+  font-size: 0.9em;
+  border: 1px solid #ddd;
+  z-index: 10;
+  transition: all 0.1s ease-out;
+  pointer-events: none;
+}
+</style>
+
+<body onload="init()">
+    <div id="tooltip" class="tooltip">
+        <div class="tooltip-date">
+            <span id="date"></span>
+        </div>
+        <div class="tooltip-country">
+            <div id="country">
+            </div>
+        </div>
+    </div>
+    <div id="line_data">
+        
+    </div>
+
+    <script>
+        class Country {
+            constructor(code, name, value, year) {
+                this.code = code;
+                this.name = name;
+                this.value = value;
+                this.year = year;
+            }
+        }
+
+        var margin = { top: 60, right: 230, bottom: 50, left: 50 },
+            width = 660 - margin.left - margin.right,
+            height = 400 - margin.top - margin.bottom;
+
+        var svg = d3.select("#line_data")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform",
+                "translate(" + margin.left + "," + margin.top + ")")
+            .on("mouseover", onMouseOver);
+
+        var x = d3.scaleLinear()
+            .domain([1990, 2019])
+            .range([0, width]);
+        svg.append("g")
+            .attr("transform", "translate(0," + height + ")")
+            .call(d3.axisBottom(x).ticks(5).tickFormat(function (d) { return d}));
+
+        // Add Y axis
+        var y = d3.scaleLinear()
+            .domain([0, 50])
+            .range([height, 0]);
+        svg.append("g")
+            .call(d3.axisLeft(y));
+
+        const xAxisLine = svg
+            .append("g")
+            .append("rect")
+            .attr("class", "dotted")
+            .attr("stroke-width", "1px")
+            .attr("width", ".5px")
+            .attr("stroke", "#000")
+            .attr("top", margin.top)
+            .attr("bottom", margin.bottom)
+            .attr("height", height);
+
+        const yAccessor = (d) => d.value;
+        const xAccessor = (d) => {
+            console.log(d);
+            return d.year;
+        };
+
+        const tooltip = d3.select("#tooltip"); 
+
+
+        function onMouseOver() {
+            const mousePosn = d3.mouse(this);
+            const hoveredYear = x.invert(mousePosn[0]);
+
+            const getDistanceFromHoveredYear = (d) => Math.abs(xAccessor(d) - hoveredYear);
+            const closestIndex = d3.scan(filteredCountries, (a, b) => getDistanceFromHoveredYear(a) - getDistanceFromHoveredYear(b));
+            const closestDataPoint = filteredCountries[closestIndex];
+
+            // console.log(closestDataPoint);
+
+            const closestXValue = xAccessor(closestDataPoint);
+
+            const currValues = filteredCountries.filter(fc => fc.year == closestXValue);
+            console.log(currValues);
+
+            const closestYValue = yAccessor(closestDataPoint);
+
+            tooltip.select("#date").text(closestXValue);
+        
+            const formatValue = (d) => `${d3.format(".2f")(d)}`;
+
+            tooltip.select("#country").selectAll("span").remove();
+
+            tooltip
+            .select("#country")
+            .selectAll(".values")
+            .data(currValues)
+            .enter()
+            .append("span")
+            .style("color", function (d, i) {return colorScale(d.code)})
+            .html(function(d) { return `${d.name} ` + formatValue(d.value) + "<br>"});
+
+            const xPx = x(closestXValue) + margin.left;
+            const yPx = y(closestYValue) + margin.top;
+
+            tooltip.style("transform", 
+            "translate(" + `calc(-50% + ${xPx}px),` + `calc(-100% + ${yPx}px)` + `)`);
+
+            tooltip.style("opacity", 1);
+            // tooltipCircle
+            // .attr("cx", x(closestXValue))
+            // .attr("cy", y(closestYValue))
+            // .style("opacity", 1);
+
+            xAxisLine.attr("x", x(closestXValue));
+
+
+        }
+
+        var colorScale = []
+        var countries = []
+        var promises = []
+        var selectedCountries = ['TUR', "LKA"]
+        var filteredCountries = []
+
+        async function init() {
+
+            promises.push(d3.csv("rate-of-premature-deaths-due-to-alcohol.csv", function (data) {
+                countries.push(new Country(data.Code, data.Entity, data.Deaths, parseInt(data.Year)));
+            }));
+
+            result = Promise.all(promises).then(function (topo) {
+                colorScale = d3.scaleOrdinal().domain(selectedCountries).range(d3.schemeCategory10);
+
+                for (i = 0; i < selectedCountries.length; i++) {
+                    addPath(countries, selectedCountries[i]);
+                }
+            });
+        }
+
+
+        function addPath(countries, country) {
+            var filtered = countries.filter(c => c.code == country);
+            filteredCountries.push(...filtered);
+            console.log(filteredCountries);
+
+            svg.selectAll(".circle")
+                .data(filtered)
+                .enter()
+                .append("circle")
+                .attr("cx", function (d) { return x(d.year) })
+                .attr("cy", function (d) { return y(d.value) })
+                .attr("r", 2);
+
+            svg.append("path")
+                .datum(filtered)
+                .attr("fill", "none")
+                .attr("stroke", function (d, i) { return colorScale(d[i].code); })
+                .attr("stroke-width", 1.5)
+                .attr("d", d3.line()
+                    .x(function (d) { return x(d.year) })
+                    .y(function (d) { return y(d.value) })
+                );
+        }
+    </script>
+</body>
+
+</html>
