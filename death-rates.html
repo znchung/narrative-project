@@ -13,19 +13,27 @@
     }
 
     .title {
-        margin-left: 40%;
+        margin-left: 30%;
+    }
+
+    .years {
+        margin-left: 20%;
+    }
+    
+    select {
+        width: 100px;
     }
 </style>
 
 <body onload='init()'>
     <div id="tooltip"></div>
-    <p id="title" class="title">Death rates from alcohol use disorders, 2008 - 2018</p>
-    <label for='years'>Choose year:</label>
+    <h2 id="title" class="title">Death rates from alcohol use disorders, 2019</h2>
+    <label class='years' for='years'>Choose year:</label>
     <select name='years' id='years' onchange="onYearSelected()"></select>
     <svg id="map">
     </svg>
     <script>
-        var selectedYear = -1;
+        var selectedYear = 2019;
         class Country {
             constructor(code, value, year) {
                 this.code = code;
@@ -60,7 +68,7 @@
             .center([0, 20])
             .translate([width / 2 - margin.left, height / 2]);
 
-        var domain = [0, 1, 1.5, 2, 2.5, 3, 4, 6, 8, 10,15]
+        var domain = [0, 1, 1.5, 2, 2.5, 3, 4, 6, 8, 10, 15]
         var range = ["#fee1d4", "#fae1d4", "#f3bea5", "#ee9679", "#e97254", "#dd4b39", "#af2d26", "#a92b24", "#98231f", "#6b1615", "#5f0e12"]
         var colorScale = d3.scaleThreshold()
             .domain(domain)
@@ -101,12 +109,38 @@
 
                 var legend = d3.legendColor()
                     .labels(domain.map(d => d))
-                    .title("Alcohol consumption")
+                    .title("Deaths per 100,000")
                     .scale(colorScale)
 
 
                 svg.select(".legendQuant")
                     .call(legend);
+
+                const annotations2 = [
+                    {
+                        note: {
+                            label: "USA had a total of 84.16 deaths per 100,000 from 2008 - 2018",
+                            title: "USA",
+                            wrap: 150,  // try something smaller to see text split in several lines
+                            padding: 10   // More = text lower
+
+                        },
+                        color: ["#000000"],
+                        x: projection([-95.7129, 37.0902])[0],
+                        y: projection([-95.7129, 37.0902])[1],
+                        dy: -40,
+                        dx: -70
+                    }
+                ];
+
+                const makeAnnotations2 = d3.annotation()
+                    .annotations(annotations2);
+
+                svg.append("g")
+                    .style("opacity", 1)
+                    .attr("id", "annotation2")
+                    .call(makeAnnotations2);
+
             });
         }
 
@@ -178,7 +212,7 @@
             d.total = total;
 
             d3.select("#details")
-                .text(d.properties.name + ": " + d3.format(",.2f")(d.total) + " litres")
+                .text(d.properties.name + ": " + d3.format(",.2f")(d.total) + " deaths per 100,000")
 
             addLineGraph(countries, d.id);
 
@@ -187,7 +221,7 @@
                 .style("left", (d3.event.pageX + 30) + "px")
                 .style("top", (d3.event.pageY - 28) + "px");
 
-            d3.select("#annotation")
+            d3.select("#annotation2")
                 .style("opacity", 0)
         }
 
@@ -203,7 +237,7 @@
                 .transition()
                 .duration(200)
 
-            d3.select("#annotation")
+            d3.select("#annotation2")
                 .style("opacity", 1)
 
             d3.select("#tooltip")
@@ -215,7 +249,7 @@
 
         function createDropDown() {
             var years = [-1]
-            years.push.apply(years, [2000, 2005, 2010, 2015, 2018])
+            years.push.apply(years, d3.range(1990, 2020))
             // years.append(d3.range(2000, 2019))
             var options = d3.select("#years")
                 .selectAll('option')
@@ -234,33 +268,38 @@
         function addLineGraph(countries, country) {
 
             var lineGraphMargin = { top: 10, right: 30, bottom: 30, left: 60 },
-                width = 460 - margin.left - margin.right,
-                height = 400 - margin.top - margin.bottom;
+                width = 250 - margin.left - margin.right,
+                height = 200 - margin.top - margin.bottom;
+
+            //     var margin = { top: 60, right: 230, bottom: 50, left: 50 },
+            // width = 660 - margin.left - margin.right,
+            // height = 400 - margin.top - margin.bottom;
+
 
             var canvas = d3.select("#line_data")
                 .append("svg")
-                .attr("width", 200)
-                .attr("height", 150)
+                .attr("width", 300)
+                .attr("height", 200)
                 .append("g")
                 .attr("transform",
-                    "translate(" + 30 + "," + 10 + ")");
+                    "translate(" + 30 + "," + 0 + ")");
 
 
             var filtered = countries.filter(c => c.code == country);
-
+            var max = Math.max(...filtered.map(f => f.value));
             var x = d3.scaleLinear()
-                .domain([2000, 2018])
-                .range([0, 100]);
+                .domain([1990, 2019])
+                .range([0, width]);
             canvas.append("g")
-                .attr("transform", "translate(0," + 100 + ")")
+                .attr("transform", "translate(0," + height + ")")
                 .call(d3.axisBottom(x).tickFormat(function (d) { return d == 2000 || d == 2018 ? d : null; }));
 
             // Add Y axis
             var y = d3.scaleLinear()
-                .domain([0, 22])
-                .range([100, 0]);
+                .domain([0, max])
+                .range([height, 0]);
             canvas.append("g")
-                .call(d3.axisLeft(y));
+                .call(d3.axisLeft(y).ticks(1));
 
             // Add the line
             canvas.append("path")
@@ -278,7 +317,7 @@
             var yearText = selectedYear;
 
             if (yearText == -1) {
-                yearText = "2000 - 2018";
+                yearText = "2000 - 2019";
             }
 
             d3.select("#title")
@@ -287,6 +326,10 @@
 
         function onYearSelected() {
             selectedYear = d3.select('select').property('value');
+
+            if (selectedYear == "Total") {
+                selectedYear = -1;
+            }
             updateTitle();
             loadData();
         }

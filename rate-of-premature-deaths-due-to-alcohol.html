@@ -12,6 +12,14 @@
         stroke: black;
     }
 
+    .title {
+        margin-left: 30%;
+    }
+
+    .graph {
+        margin-left: 25%;
+    }
+
     .dotted {
         stroke: #5c5c5c;
         stroke-dasharray: 1 1;
@@ -95,9 +103,10 @@
     }
 
     button {
-        margin-left: 20px;
+        margin-left: 30%;
         font-size: small;
-        background-color: blue;
+        width: 150px;
+        background-color: lightseagreen;
         color: white;
     }
 
@@ -108,7 +117,7 @@
 </style>
 
 <body onload="init()">
-    <h2>Rate of premature deaths due to alcohol, 1990 to 2019</h2>
+    <h2 class="title">Rate of premature deaths due to alcohol, 1990 to 2019</h2>
     <button type="button" onclick="showCountrySelection()">Add Country</button>
     <div id="tooltip" class="tooltip">
         <div class="tooltip-date">
@@ -202,18 +211,18 @@
         }
 
         var margin = { top: 60, right: 230, bottom: 50, left: 50 },
-            width = 660 - margin.left - margin.right,
+            width = 800 - margin.left - margin.right,
             height = 400 - margin.top - margin.bottom;
 
         var svg = d3.select("#line_data")
             .append("svg")
+            .attr("class", "graph")
             .attr("width", width + margin.left + margin.right)
             .attr("height", height + margin.top + margin.bottom)
             .append("g")
             .attr("transform",
                 "translate(" + margin.left + "," + margin.top + ")")
             .on("mouseover", onMouseOver);
-
         var x = d3.scaleLinear()
             .domain([1990, 2019])
             .range([0, width]);
@@ -245,7 +254,6 @@
         };
 
         const tooltip = d3.select("#tooltip");
-
 
         function onMouseOver() {
             const mousePosn = d3.mouse(this);
@@ -292,6 +300,9 @@
 
             xAxisLine.attr("x", x(closestXValue));
 
+            d3.select("#annotation3")
+                .style("opacity", 0)
+
 
         }
 
@@ -299,7 +310,7 @@
         var countries = []
         var promises = []
         var uniqueCountryNames = {}
-        var selectedCountries = ['TUR', "LKA"]
+        var selectedCountries = ['USA','TUR', "LKA"]
         var filteredCountries = []
 
         async function init() {
@@ -319,6 +330,31 @@
                 for (i = 0; i < selectedCountries.length; i++) {
                     addPath(countries, selectedCountries[i]);
                 }
+
+                const annotations3 = [
+                    {
+                        note: {
+                            label: "Sri Lanka had a total of 50.01 deaths per 100,000 on the year 2004",
+                            title: "Sri Lanka",
+                            wrap: 180,  // try something smaller to see text split in several lines
+                            padding: 10   // More = text lower
+
+                        },
+                        color: ["#000000"],
+                        x: x(2004),
+                        y: y(50.01),
+                        dy: 10,
+                        dx: 100
+                    }
+                ];
+
+                const makeAnnotations3 = d3.annotation()
+                    .annotations(annotations3);
+
+                svg.append("g")
+                    .style("opacity", 1)
+                    .attr("id", "annotation3")
+                    .call(makeAnnotations3);
             });
         }
 

@@ -13,14 +13,22 @@
     }
 
     .title {
-        margin-left: 40%;
+        margin-left: 30%;
+    }
+
+    .years {
+        margin-left: 20%;
+    }
+    
+    select {
+        width: 100px;
     }
 </style>
 
 <body onload='init()'>
     <div id="tooltip"></div>
-    <p id="title" class="title">World alcohol consumption by litres, 2008 - 2018</p>
-    <label for='years'>Choose year:</label>
+    <h2 id="title" class="title">World average alcohol consumption per person by litres, 2008 - 2018</h2>
+    <label class="years" for='years'>Choose year:</label>
     <select name='years' id='years' onchange="onYearSelected()"></select>
     <svg id="map">
     </svg>
@@ -107,6 +115,33 @@
 
                 svg.select(".legendQuant")
                     .call(legend);
+
+                // Features of the annotation
+                const annotations = [
+                    {
+                        note: {
+                            label: "USA consumed an average of 47.73 litres of alcohol per person from 2008 - 2018",
+                            title: "USA",
+                            wrap: 150,  // try something smaller to see text split in several lines
+                            padding: 10   // More = text lower
+
+                        },
+                        color: ["#000000"],
+                        x: projection([-95.7129, 37.0902])[0],
+                        y: projection([-95.7129, 37.0902])[1],
+                        dy: -40,
+                        dx: -70
+                    }
+                ];
+
+                const makeAnnotations = d3.annotation()
+                    .annotations(annotations);
+
+                svg.append("g")
+                    .style("opacity", 1)
+                    .attr("id", "annotation")
+                    .call(makeAnnotations);
+
             });
         }
 
@@ -282,11 +317,15 @@
             }
 
             d3.select("#title")
-                .text("World alcohol consumption by litres, " + yearText)
+                .text("World average alcohol consumption per person by litres, " + yearText)
         }
 
         function onYearSelected() {
             selectedYear = d3.select('select').property('value');
+
+            if (selectedYear == "Total") {
+                selectedYear = -1;
+            }
             updateTitle();
             loadData();
         }
